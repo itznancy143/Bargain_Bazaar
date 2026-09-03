@@ -1,0 +1,129 @@
+.featured-section-root {
+  padding: 5rem 0;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.featured-header-wrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.section-kicker-flex {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Tabs */
+.featured-tabs-row {
+  margin-bottom: 2.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.tabs-pill-list {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: max-content;
+}
+
+.tab-pill-btn {
+  padding: 0.55rem 1.15rem;
+  border-radius: var(--radius-full);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-muted);
+  border: 1px solid var(--border-light);
+  transition: all var(--transition-fast);
+}
+
+.tab-pill-btn:hover {
+  color: var(--text-main);
+  background: #E2E8F0;
+}
+
+.tab-pill-btn.active {
+  background: var(--primary);
+  color: #FFFFFF;
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+/* Product Grid */
+.featured-product-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.75rem;
+  margin-bottom: 3.5rem;
+}
+
+/* Loading Skeleton */
+.featured-loading-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.75rem;
+  margin-bottom: 3.5rem;
+}
+
+.product-skeleton-card {
+  background: #FFFFFF;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.skeleton-image {
+  width: 100%;
+  padding-top: 70%;
+  background: #E2E8F0;
+  border-radius: var(--radius-lg);
+  animation: pulseGlow 1.5s infinite;
+}
+
+.skeleton-text-line {
+  height: 14px;
+  background: #E2E8F0;
+  border-radius: var(--radius-xs);
+  animation: pulseGlow 1.5s infinite;
+}
+
+.width-30 { width: 30%; }
+.width-50 { width: 50%; }
+.width-80 { width: 80%; }
+
+/* Bottom CTA */
+.featured-bottom-cta {
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 1200px) {
+  .featured-product-grid,
+  .featured-loading-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .featured-product-grid,
+  .featured-loading-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 580px) {
+  .featured-product-grid,
+  .featured-loading-grid {
+    grid-template-columns: 1fr;
+  }
+}

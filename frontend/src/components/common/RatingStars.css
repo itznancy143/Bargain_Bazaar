@@ -1,0 +1,26 @@
+.rating-stars-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.825rem;
+}
+
+.rating-stars-icon-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.star-icon.filled {
+  fill: #F59E0B;
+  color: #F59E0B;
+}
+
+.rating-score {
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.rating-count {
+  color: var(--text-muted);
+  font-size: 0.775rem;
+}
