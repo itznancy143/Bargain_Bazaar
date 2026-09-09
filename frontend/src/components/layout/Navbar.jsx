@@ -98,6 +98,11 @@ export const Navbar = () => {
           <NavLink to="/products" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             Explore
           </NavLink>
+          {currentUser && (
+            <NavLink to="/offers" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              Offers & Deals
+            </NavLink>
+          )}
           <div className="nav-search-bar-wrap">
             <form onSubmit={handleSearchSubmit} className="nav-search-form">
               <Search size={16} className="nav-search-icon" />
@@ -242,6 +247,15 @@ export const Navbar = () => {
                   </Link>
 
                   <Link
+                    to="/offers"
+                    className="dropdown-item"
+                    onClick={() => setProfileDropdownOpen(false)}
+                  >
+                    <Handshake size={16} />
+                    <span>Offers & Bargains</span>
+                  </Link>
+
+                  <Link
                     to="/orders"
                     className="dropdown-item"
                     onClick={() => setProfileDropdownOpen(false)}
@@ -339,6 +353,9 @@ export const Navbar = () => {
                 </Link>
                 <Link to="/dashboard" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
                   Seller Dashboard
+                </Link>
+                <Link to="/offers" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
+                  Offers & Bargains
                 </Link>
                 <Link to="/orders" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
                   Orders & Deals

@@ -1,80 +1,43 @@
-const express = require('express');
+import express from 'express';
+import {
+  createOffer,
+  getMyOffers,
+  getOfferByProduct,
+  getOfferById,
+  acceptOffer,
+  confirmDeal,
+  rejectOffer,
+  counterOffer
+} from '../controllers/offerController.js';
+import { protect } from '../middleware/authMiddleware.js';
+
 const router = express.Router();
-const Offer = require('../models/Offer');
 
-// Get all offers
-router.get('/', async (req, res) => {
-  try {
-    const offers = await Offer.find()
-      .populate('product', 'name originalPrice currentPrice')
-      .populate('buyer', 'username rating')
-      .populate('seller', 'username rating');
-    res.json(offers);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// All offer routes require user authentication
+router.use(protect);
 
-// Get offers for a product
-router.get('/product/:productId', async (req, res) => {
-  try {
-    const offers = await Offer.find({ product: req.params.productId })
-      .populate('buyer', 'username rating')
-      .populate('seller', 'username rating');
-    res.json(offers);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// Create new offer
+router.post('/', createOffer);
 
-// Get offers for a user (buyer or seller)
-router.get('/user/:userId', async (req, res) => {
-  try {
-    const offers = await Offer.find({
-      $or: [{ buyer: req.params.userId }, { seller: req.params.userId }]
-    })
-      .populate('product', 'name originalPrice currentPrice')
-      .populate('buyer', 'username rating')
-      .populate('seller', 'username rating');
-    res.json(offers);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// Get user's received/sent offers
+router.get('/my', getMyOffers);
 
-// Create offer
-router.post('/', async (req, res) => {
-  try {
-    const offer = new Offer(req.body);
-    await offer.save();
-    await offer.populate('product').populate('buyer').populate('seller');
-    res.status(201).json(offer);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
+// Check if user has active offer on product
+router.get('/product/:productId', getOfferByProduct);
 
-// Update offer (accept/reject/counter-offer)
-router.put('/:id', async (req, res) => {
-  try {
-    const offer = await Offer.findByIdAndUpdate(req.params.id, req.body, { new: true })
-      .populate('product')
-      .populate('buyer')
-      .populate('seller');
-    res.json(offer);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
+// Get single negotiation details
+router.get('/:id', getOfferById);
 
-// Delete offer
-router.delete('/:id', async (req, res) => {
-  try {
-    await Offer.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Offer deleted' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// Accept offer / counteroffer -> Deal Agreed
+router.put('/:id/accept', acceptOffer);
 
-module.exports = router;
+// Finalize a deal (seller authorization is enforced in the controller)
+router.put('/:id/confirm-deal', confirmDeal);
+
+// Reject offer / counteroffer
+router.put('/:id/reject', rejectOffer);
+
+// Make a counteroffer
+router.post('/:id/counter', counterOffer);
+
+export default router;

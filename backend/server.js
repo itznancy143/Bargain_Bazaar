@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
+import offerRoutes from './routes/offerRoutes.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -24,6 +25,7 @@ app.use(express.json());
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/offers', offerRoutes);
 
 // Root Route
 app.get('/', (req, res) => {
