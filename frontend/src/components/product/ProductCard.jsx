@@ -13,19 +13,21 @@ export const ProductCard = ({ product }) => {
 
   if (!product) return null;
 
+  const id = product._id || product.id;
   const {
-    id,
     title,
     category,
     askingPrice,
     originalPrice,
     isNegotiable = true,
-    condition,
-    location,
-    image,
+    condition = 'Good',
+    location = 'India',
     seller,
     activeOffersCount = 0
   } = product;
+
+  const image = product.image || (product.images && product.images.length > 0 ? product.images[0] : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80');
+  const sellerAvatar = seller?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(seller?.name || 'Seller')}&background=2563EB&color=fff&bold=true`;
 
   const wishlisted = isWishlisted(id);
 
@@ -109,9 +111,9 @@ export const ProductCard = ({ product }) => {
         {/* Seller Info & Micro Rating */}
         <div className="product-seller-row">
           <div className="seller-left">
-            <img src={seller?.avatar} alt={seller?.name} className="seller-avatar-mini" />
+            <img src={sellerAvatar} alt={seller?.name || 'Seller'} className="seller-avatar-mini" />
             <div className="seller-name-box">
-              <span className="seller-name">{seller?.name}</span>
+              <span className="seller-name">{seller?.name || 'Verified Seller'}</span>
               {seller?.verified && (
                 <CheckCircle size={13} className="seller-verified-icon" title="Verified Seller" />
               )}
