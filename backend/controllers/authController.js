@@ -16,7 +16,7 @@ const generateToken = (id, role) => {
 // @access  Public
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
     // 1. Validate required fields
     if (!name || !email || !password) {
@@ -59,7 +59,8 @@ export const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // 6. Create user in database
-    const userRole = role && ['buyer', 'seller', 'admin'].includes(role) ? role : 'buyer';
+    // Public registration creates one normal account. Admin accounts are provisioned separately.
+    const userRole = 'user';
     const user = await User.create({
       name: name.trim(),
       email: normalizedEmail,

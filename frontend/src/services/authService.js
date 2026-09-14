@@ -13,10 +13,10 @@ export const authService = {
    * @param {string} role 
    * @returns {Promise<{ success: boolean, message: string, user: object, token: string }>}
    */
-  async register(name, email, password, role = 'buyer') {
+  async register(name, email, password) {
     const data = await apiFetch('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ name, email, password, role })
+      body: JSON.stringify({ name, email, password })
     });
     return data;
   },

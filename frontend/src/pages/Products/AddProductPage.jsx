@@ -30,6 +30,7 @@ export const AddProductPage = () => {
   const { id } = useParams(); // If id exists, it's Edit Mode
   const isEditMode = !!id;
   const { currentUser, isAuthenticated } = useApp();
+  const canManageProducts = !!currentUser;
 
   const [formData, setFormData] = useState({
     title: '',
@@ -81,6 +82,24 @@ export const AddProductPage = () => {
       fetchExistingProduct();
     }
   }, [id, isEditMode]);
+
+  if (!isAuthenticated || !canManageProducts) {
+    return (
+      <div className="container add-product-root">
+        <div className="surface-card" style={{ padding: '40px', textAlign: 'center' }}>
+          <AlertCircle size={40} className="text-danger" style={{ margin: '0 auto 16px' }} />
+          <h2>Sign In Required</h2>
+          <p className="text-muted" style={{ margin: '8px 0 24px' }}>
+            Sign in to create or edit your own product listings.
+          </p>
+          <Link to={isAuthenticated ? '/dashboard/products' : '/login'} className="btn btn-primary">
+            <ArrowLeft size={16} />
+            <span>{isAuthenticated ? 'Back to Products' : 'Sign In'}</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

@@ -17,18 +17,26 @@ export const ExploreProductsPage = () => {
   const [sortBy, setSortBy] = useState('recommended');
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetch = async () => {
       setLoading(true);
-      const res = await productService.getProducts({
-        category: selectedCategory,
-        search: searchTerm,
-        condition: selectedCondition,
-        sortBy
-      });
-      setProducts(res);
-      setLoading(false);
+      setError('');
+      try {
+        const res = await productService.getProducts({
+          category: selectedCategory,
+          search: searchTerm,
+          condition: selectedCondition,
+          sortBy
+        });
+        setProducts(res);
+      } catch (err) {
+        setProducts([]);
+        setError(err.message || 'Unable to load marketplace products.');
+      } finally {
+        setLoading(false);
+      }
     };
     fetch();
   }, [selectedCategory, searchTerm, selectedCondition, sortBy]);
@@ -108,6 +116,14 @@ export const ExploreProductsPage = () => {
       {/* Products Grid */}
       {loading ? (
         <div className="explore-loading">Loading marketplace catalog...</div>
+      ) : error ? (
+        <div className="explore-empty surface-card">
+          <h3>Marketplace unavailable</h3>
+          <p>{error}</p>
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => window.location.reload()}>
+            Retry
+          </button>
+        </div>
       ) : products.length > 0 ? (
         <div className="explore-grid">
           {products.map((p) => (

@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Offer from '../models/Offer.js';
 import Product from '../models/Product.js';
 import User from '../models/User.js';
+import Order from '../models/Order.js';
 
 // Safe product fields to populate (SECURITY: minimumPrice is NEVER included)
 const SAFE_PRODUCT_FIELDS = 'title images image askingPrice originalPrice condition location category categorySlug status isNegotiable brand seller';
@@ -359,10 +360,34 @@ export const acceptOffer = async (req, res) => {
     const isBuyer = userId === buyerId;
     const userRole = isBuyer ? 'buyer' : 'seller';
 
-    // 4. Record the proposed agreed price, but do not finalize the deal.
-    offer.status = 'waiting_seller_confirmation';
-    offer.agreedPrice = offer.amount;
-    offer.dealAgreedAt = new Date();
+    if (isBuyer) {
+      const address = req.body.deliveryAddress || {};
+      const requiredAddressFields = ['addressLine1', 'city', 'state', 'postalCode'];
+      const hasInvalidAddress = requiredAddressFields.some((field) => !String(address[field] || '').trim());
+
+      if (hasInvalidAddress) {
+        return res.status(400).json({
+          success: false,
+          message: 'Delivery address must include address line, city, state, and postal code.'
+        });
+      }
+
+      offer.deliveryAddress = {
+        addressLine1: String(address.addressLine1).trim(),
+        addressLine2: String(address.addressLine2 || '').trim(),
+        city: String(address.city).trim(),
+        state: String(address.state).trim(),
+        postalCode: String(address.postalCode).trim(),
+        country: String(address.country || 'India').trim()
+      };
+    }
+
+    // 4. A buyer acceptance is ready for seller confirmation. A seller
+    // acceptance remains an active seller proposal so the buyer can
+    // acknowledge the price and provide the delivery address first.
+    offer.status = isBuyer ? 'waiting_seller_confirmation' : 'countered';
+    offer.agreedPrice = isBuyer ? offer.amount : null;
+    offer.dealAgreedAt = isBuyer ? new Date() : null;
     offer.history.push({
       sender: req.user._id,
       senderRole: userRole,
@@ -382,7 +407,9 @@ export const acceptOffer = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: `Price accepted at ₹${Number(offer.agreedPrice).toLocaleString('en-IN')}. Waiting for seller confirmation.`,
+      message: isBuyer
+        ? `Price accepted at ₹${Number(offer.agreedPrice).toLocaleString('en-IN')}. Waiting for seller confirmation.`
+        : `Seller accepted the offer at ₹${Number(offer.amount).toLocaleString('en-IN')}. Waiting for buyer confirmation.`,
       offer: populatedOffer
     });
   } catch (error) {
@@ -434,6 +461,22 @@ export const confirmDeal = async (req, res) => {
       });
     }
 
+    if (offer.status === 'deal_confirmed') {
+      const existingOrder = await Order.findOne({ offer: offer._id });
+      const populatedOffer = await Offer.findById(offer._id)
+        .populate('product', SAFE_PRODUCT_FIELDS)
+        .populate('buyer', SAFE_USER_FIELDS)
+        .populate('seller', SAFE_USER_FIELDS)
+        .populate('history.sender', SAFE_USER_FIELDS);
+
+      return res.status(200).json({
+        success: true,
+        message: `Deal confirmed at ₹${Number(offer.agreedPrice).toLocaleString('en-IN')}.`,
+        offer: populatedOffer,
+        orderId: existingOrder?.orderId
+      });
+    }
+
     if (offer.status !== 'waiting_seller_confirmation') {
       return res.status(400).json({
         success: false,
@@ -455,11 +498,46 @@ export const confirmDeal = async (req, res) => {
       });
     }
 
-    offer.status = 'deal_confirmed';
-    offer.dealConfirmedAt = new Date();
-    await offer.save();
+    const address = offer.deliveryAddress || {};
+    const requiredAddressFields = ['addressLine1', 'city', 'state', 'postalCode'];
+    if (requiredAddressFields.some((field) => !String(address[field] || '').trim())) {
+      return res.status(400).json({
+        success: false,
+        message: 'The buyer must provide a complete delivery address before the deal can be confirmed.'
+      });
+    }
 
-    const populatedOffer = await Offer.findById(offer._id)
+    let order = await Order.findOne({ offer: offer._id });
+    if (!order) {
+      try {
+        order = await Order.create({
+          orderId: `BB-${Date.now()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+          product: offer.product,
+          buyer: offer.buyer,
+          seller: product.seller,
+          offer: offer._id,
+          agreedPrice: offer.agreedPrice,
+          quantity: 1,
+          totalAmount: offer.agreedPrice,
+          deliveryAddress: address,
+          orderStatus: 'pending_payment',
+          paymentStatus: 'unpaid'
+        });
+      } catch (error) {
+        if (error.code !== 11000) throw error;
+        order = await Order.findOne({ offer: offer._id });
+      }
+    }
+
+    const confirmedOffer = await Offer.findOneAndUpdate(
+      { _id: offer._id, status: 'waiting_seller_confirmation' },
+      { $set: { status: 'deal_confirmed', dealConfirmedAt: new Date() } },
+      { new: true }
+    );
+
+    const finalOffer = confirmedOffer || await Offer.findById(offer._id);
+
+    const populatedOffer = await Offer.findById(finalOffer._id)
       .populate('product', SAFE_PRODUCT_FIELDS)
       .populate('buyer', SAFE_USER_FIELDS)
       .populate('seller', SAFE_USER_FIELDS)
@@ -467,8 +545,9 @@ export const confirmDeal = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: `Deal confirmed at ₹${Number(offer.agreedPrice).toLocaleString('en-IN')}.`,
-      offer: populatedOffer
+      message: `Deal confirmed at ₹${Number(finalOffer.agreedPrice).toLocaleString('en-IN')}.`,
+      offer: populatedOffer,
+      orderId: order.orderId
     });
   } catch (error) {
     return res.status(500).json({

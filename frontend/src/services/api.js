@@ -1,9 +1,9 @@
 /**
  * API Helper Service for Bargain Bazaar
- * Centralized fetch client communicating with Node/Express backend at http://localhost:5001
+ * Centralized fetch client communicating with the Node/Express backend.
  */
 
-const API_BASE_URL = 'http://localhost:5001';
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001').replace(/\/$/, '');
 
 /**
  * Perform an authenticated API request using native fetch()

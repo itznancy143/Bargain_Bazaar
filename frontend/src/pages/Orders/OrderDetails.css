@@ -1,0 +1,29 @@
+.order-details-page { padding-top: 2.5rem; padding-bottom: 4rem; }
+.order-details-back { display: inline-flex; align-items: center; gap: .4rem; color: var(--text-muted); margin-bottom: 1.5rem; }
+.order-details-back:hover { color: var(--primary); }
+.order-details-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
+.order-details-header h1 { margin: .35rem 0; font-size: 2rem; }
+.order-details-header p { display: inline-flex; align-items: center; gap: .35rem; color: var(--text-muted); }
+.order-details-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.order-details-product { grid-column: 1 / -1; display: flex; align-items: center; gap: 1.25rem; padding: 1rem; }
+.order-details-product img { width: 150px; height: 150px; object-fit: cover; border-radius: var(--radius-md); background: var(--bg-muted); }
+.order-details-product h2 { margin: .35rem 0; font-size: 1.35rem; }
+.order-details-product p, .order-details-panel p { color: var(--text-muted); }
+.order-details-panel { padding: 1.25rem; }
+.order-details-panel h2 { display: flex; align-items: center; gap: .45rem; margin-bottom: 1rem; font-size: 1.1rem; }
+.order-details-facts { display: grid; gap: .8rem; }
+.order-details-facts div { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: .65rem; }
+.order-details-facts dt { color: var(--text-muted); }
+.order-details-facts dd { font-weight: 700; color: var(--text-main); }
+.order-details-address { color: var(--text-muted); line-height: 1.7; font-style: normal; }
+.order-details-muted { color: var(--text-muted); }
+.order-details-spaced { margin-top: 1rem; }
+.order-details-state { min-height: 240px; padding: 2rem; display: grid; justify-items: center; align-content: center; gap: .8rem; text-align: center; }
+.order-details-state h1 { font-size: 1.4rem; }
+.order-details-state p { color: var(--text-muted); }
+@media (max-width: 700px) {
+  .order-details-header { align-items: flex-start; flex-direction: column; }
+  .order-details-layout { grid-template-columns: 1fr; }
+  .order-details-product { align-items: flex-start; }
+  .order-details-product img { width: 96px; height: 96px; }
+}

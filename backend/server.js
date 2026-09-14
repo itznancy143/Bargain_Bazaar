@@ -5,6 +5,7 @@ import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import offerRoutes from './routes/offerRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -26,13 +27,14 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/offers', offerRoutes);
+app.use('/api/orders', orderRoutes);
 
 // Root Route
 app.get('/', (req, res) => {
   res.json({ message: 'Bargain Bazaar API is running' });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 const startServer = async () => {
   try {

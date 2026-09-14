@@ -102,6 +102,11 @@ export const ProductDetailPage = () => {
           <p className="text-muted" style={{ margin: '8px 0 24px' }}>
             {error || 'The product listing you requested could not be found.'}
           </p>
+          {error && (
+            <button type="button" className="btn btn-secondary" onClick={() => window.location.reload()} style={{ marginBottom: '12px' }}>
+              Retry
+            </button>
+          )}
           <Link to="/products" className="btn btn-primary">
             <ArrowLeft size={16} />
             <span>Back to Products</span>
@@ -318,7 +323,7 @@ export const ProductDetailPage = () => {
                   <CheckCircle size={15} className="text-success" title="Verified Seller" />
                 </div>
                 <div className="detail-seller-meta">
-                  <span>{product.seller?.role ? `${product.seller.role.toUpperCase()} Member` : 'Verified Seller'}</span>
+                  <span>Verified Seller</span>
                   {product.seller?.email && <span> • Contact available upon deal</span>}
                 </div>
               </div>

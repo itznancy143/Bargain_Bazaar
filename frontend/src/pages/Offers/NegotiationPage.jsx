@@ -38,6 +38,14 @@ export const NegotiationPage = () => {
   const [counterAmount, setCounterAmount] = useState('');
   const [counterMessage, setCounterMessage] = useState('');
   const [showCounterInput, setShowCounterInput] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState({
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: 'India'
+  });
 
   // Redirect to login if unauthenticated
   useEffect(() => {
@@ -60,6 +68,7 @@ export const NegotiationPage = () => {
         if (res.success && res.offer) {
           setOffer(res.offer);
           setProduct(res.offer.product);
+          setDeliveryAddress((previous) => ({ ...previous, ...(res.offer.deliveryAddress || {}) }));
         }
       } else if (productId) {
         // Look up product first
@@ -71,6 +80,7 @@ export const NegotiationPage = () => {
           const existingOffer = await offerService.getOfferByProduct(productId);
           if (existingOffer) {
             setOffer(existingOffer);
+            setDeliveryAddress((previous) => ({ ...previous, ...(existingOffer.deliveryAddress || {}) }));
           }
         }
       }
@@ -154,12 +164,20 @@ export const NegotiationPage = () => {
   // Handle acceptance of the proposed price; seller confirmation is separate.
   const handleAcceptOffer = async () => {
     if (!offer) return;
+    if (isBuyer && ['addressLine1', 'city', 'state', 'postalCode'].some((field) => !deliveryAddress[field].trim())) {
+      setError('Please complete your delivery address before accepting the price.');
+      return;
+    }
     setSubmitting(true);
     setError('');
     setSuccessMsg('');
 
     try {
-      const res = await offerService.acceptOffer(offer._id, counterMessage || 'Price accepted. Waiting for seller confirmation.');
+      const res = await offerService.acceptOffer(
+        offer._id,
+        counterMessage || 'Price accepted. Waiting for seller confirmation.',
+        isBuyer ? deliveryAddress : undefined
+      );
       if (res.success && res.offer) {
         setOffer(res.offer);
         setSuccessMsg(res.message || 'Price accepted. Waiting for seller confirmation.');
@@ -539,7 +557,21 @@ export const NegotiationPage = () => {
           </p>
 
           {!showCounterInput ? (
-            <div className="neg-button-group">
+            <>
+              {isBuyer && (
+                <div className="neg-address-form">
+                  <h3>Delivery Address</h3>
+                  <p className="neg-action-desc">Required to create your order after the seller confirms this deal.</p>
+                  <input className="neg-text-input" placeholder="Address line 1" value={deliveryAddress.addressLine1} onChange={(e) => setDeliveryAddress({ ...deliveryAddress, addressLine1: e.target.value })} />
+                  <input className="neg-text-input" placeholder="Address line 2 (optional)" value={deliveryAddress.addressLine2} onChange={(e) => setDeliveryAddress({ ...deliveryAddress, addressLine2: e.target.value })} />
+                  <div className="neg-address-grid">
+                    <input className="neg-text-input" placeholder="City" value={deliveryAddress.city} onChange={(e) => setDeliveryAddress({ ...deliveryAddress, city: e.target.value })} />
+                    <input className="neg-text-input" placeholder="State" value={deliveryAddress.state} onChange={(e) => setDeliveryAddress({ ...deliveryAddress, state: e.target.value })} />
+                    <input className="neg-text-input" placeholder="Postal code" value={deliveryAddress.postalCode} onChange={(e) => setDeliveryAddress({ ...deliveryAddress, postalCode: e.target.value })} />
+                  </div>
+                </div>
+              )}
+              <div className="neg-button-group">
               <button
                 type="button"
                 className="btn-accept-deal"
@@ -573,7 +605,8 @@ export const NegotiationPage = () => {
                 <XCircle size={18} />
                 <span>Decline Offer</span>
               </button>
-            </div>
+              </div>
+            </>
           ) : (
             <form onSubmit={handleCounterSubmit} className="animate-fade-in">
               <div className="neg-form-group">

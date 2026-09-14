@@ -70,10 +70,10 @@ export const offerService = {
    * @param {string} offerId
    * @param {string} message
    */
-  async acceptOffer(offerId, message = '') {
+  async acceptOffer(offerId, message = '', deliveryAddress) {
     const data = await apiFetch(`/api/offers/${offerId}/accept`, {
       method: 'PUT',
-      body: JSON.stringify({ message })
+      body: JSON.stringify({ message, deliveryAddress })
     });
     return data;
   },

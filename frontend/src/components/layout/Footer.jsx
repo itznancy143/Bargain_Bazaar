@@ -100,8 +100,8 @@ export const Footer = () => {
               <li><Link to="/dashboard/products/new">List an Item for Sale</Link></li>
               <li><Link to="/dashboard">Seller Analytics Hub</Link></li>
               <li><Link to="/orders">Order Tracking & Escrow</Link></li>
-              <li><Link to="/messages">Live Seller Chat</Link></li>
-              <li><Link to="/profile">Reputation & Badges</Link></li>
+              <li><span>Live Seller Chat (Coming Soon)</span></li>
+              <li><span>Reputation & Badges (Coming Soon)</span></li>
             </ul>
           </div>
 
@@ -112,7 +112,7 @@ export const Footer = () => {
               <li><Link to="/#trust">Community Guidelines</Link></li>
               <li><Link to="/#trust">Seller Verification Program</Link></li>
               <li><Link to="/#trust">Bargaining Etiquette</Link></li>
-              <li><Link to="/admin">Admin Moderation</Link></li>
+              <li><span>Admin Moderation (Coming Soon)</span></li>
               <li><Link to="/#">Privacy Policy</Link></li>
               <li><Link to="/#">Terms of Service</Link></li>
             </ul>

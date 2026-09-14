@@ -1,14 +1,12 @@
 import { apiFetch } from './api.js';
-import { MOCK_PRODUCTS } from '../data/mockProducts';
 import { CATEGORIES } from '../data/categories';
 
-/**
- * Helper to normalize MongoDB products or mock products for UI consistency
- */
+const PRODUCT_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80';
+
 const normalizeProduct = (p) => {
   if (!p) return null;
   const id = p._id || p.id;
-  const image = p.image || (p.images && p.images.length > 0 ? p.images[0] : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80');
+  const image = p.image || (p.images && p.images.length > 0 ? p.images[0] : PRODUCT_IMAGE_FALLBACK);
   const images = p.images && p.images.length > 0 ? p.images : [image];
 
   return {
@@ -24,8 +22,8 @@ const normalizeProduct = (p) => {
 
 /**
  * Product Service Layer
- * Connects directly to Node/Express backend at http://localhost:5001/api/products
- * with mock fallback for initial demonstration catalogs.
+ * Connects directly to the Node/Express product API. Product IDs must come
+ * from MongoDB so they remain valid for offer and negotiation requests.
  */
 export const productService = {
   /**
@@ -45,67 +43,13 @@ export const productService = {
       const queryString = params.toString() ? `?${params.toString()}` : '';
       const data = await apiFetch(`/api/products${queryString}`, { method: 'GET' });
 
-      if (data && data.success && Array.isArray(data.products)) {
-        const backendProducts = data.products.map(normalizeProduct);
-
-        // If backend has newly created products, combine with mock catalog or display backend list
-        if (backendProducts.length > 0) {
-          return backendProducts;
-        }
+      if (data?.success && Array.isArray(data.products)) {
+        return data.products.map(normalizeProduct);
       }
+      throw new Error('The product service returned an invalid response.');
     } catch (err) {
-      console.warn('Backend products query notice, using local catalog fallback:', err.message);
+      throw err;
     }
-
-    // Fallback filter over mock products if backend has no items yet
-    let results = [...MOCK_PRODUCTS];
-
-    if (category && category !== 'all') {
-      results = results.filter(
-        (p) =>
-          p.categorySlug?.toLowerCase() === category.toLowerCase() ||
-          p.category?.toLowerCase() === category.toLowerCase()
-      );
-    }
-
-    if (search && search.trim() !== '') {
-      const q = search.toLowerCase().trim();
-      results = results.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q) ||
-          p.location?.toLowerCase().includes(q) ||
-          p.brand?.toLowerCase().includes(q)
-      );
-    }
-
-    if (condition && condition !== 'all') {
-      results = results.filter((p) => p.condition?.toLowerCase() === condition.toLowerCase());
-    }
-
-    if (location && location !== 'all') {
-      results = results.filter((p) => p.location?.toLowerCase().includes(location.toLowerCase()));
-    }
-
-    if (minPrice !== undefined && minPrice !== '') {
-      results = results.filter((p) => p.askingPrice >= Number(minPrice));
-    }
-
-    if (maxPrice !== undefined && maxPrice !== '') {
-      results = results.filter((p) => p.askingPrice <= Number(maxPrice));
-    }
-
-    if (sortBy === 'price-low') {
-      results.sort((a, b) => a.askingPrice - b.askingPrice);
-    } else if (sortBy === 'price-high') {
-      results.sort((a, b) => b.askingPrice - a.askingPrice);
-    } else if (sortBy === 'newest') {
-      results.sort((a, b) => new Date(b.dateListed || b.createdAt) - new Date(a.dateListed || a.createdAt));
-    } else {
-      results.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
-    }
-
-    return results.map(normalizeProduct);
   },
 
   /**
@@ -122,14 +66,10 @@ export const productService = {
           isOwner: !!data.isOwner
         };
       }
+      throw new Error('Product not found.');
     } catch (err) {
-      // If error or mock id requested, fallback to mock products
+      throw err;
     }
-
-    const mock = MOCK_PRODUCTS.find((p) => p.id === id || p._id === id);
-    if (mock) return normalizeProduct(mock);
-
-    throw new Error('Product not found');
   },
 
   /**

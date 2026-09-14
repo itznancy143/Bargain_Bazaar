@@ -2,10 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
   Search,
-  Heart,
-  MessageSquare,
   Bell,
-  User,
   PlusCircle,
   Menu,
   X,
@@ -26,7 +23,6 @@ export const Navbar = () => {
   const {
     currentUser,
     handleLogout,
-    wishlistCount,
     searchQuery,
     setSearchQuery,
     notifications,
@@ -129,24 +125,10 @@ export const Navbar = () => {
         {/* Right: Actions & User Menu */}
         <div className="navbar-right">
           {/* Sell Button CTA */}
-          <Link to="/dashboard/products/new" className="btn btn-primary btn-sm btn-sell-cta desktop-only">
-            <PlusCircle size={16} />
-            <span>Sell Product</span>
-          </Link>
-
-          {/* Wishlist Link */}
-          <Link to="/wishlist" className="navbar-icon-btn" title="Saved Wishlist">
-            <Heart size={20} />
-            {wishlistCount > 0 && <span className="nav-badge-count">{wishlistCount}</span>}
-          </Link>
-
-          {/* Messages Link */}
           {currentUser && (
-            <Link to="/messages" className="navbar-icon-btn" title="Buyer-Seller Messages">
-              <MessageSquare size={20} />
-              {currentUser?.unreadMessages > 0 && (
-                <span className="nav-badge-count">{currentUser.unreadMessages}</span>
-              )}
+            <Link to="/dashboard/products/new" className="btn btn-primary btn-sm btn-sell-cta desktop-only">
+              <PlusCircle size={16} />
+              <span>Sell Product</span>
             </Link>
           )}
 
@@ -222,7 +204,7 @@ export const Navbar = () => {
                     <div className="text-xs text-muted">{currentUser.email}</div>
                     <div className="user-reputation-tag">
                       <CheckCircle2 size={12} className="text-success" />
-                      <span>{currentUser.role ? `${currentUser.role.toUpperCase()} Account` : 'Verified Member'}</span>
+                      <span>{currentUser.role === 'admin' ? 'ADMIN Account' : 'Member Account'}</span>
                     </div>
                   </div>
 
@@ -262,15 +244,6 @@ export const Navbar = () => {
                   >
                     <ShoppingBag size={16} />
                     <span>Orders & Deals</span>
-                  </Link>
-
-                  <Link
-                    to="/profile"
-                    className="dropdown-item"
-                    onClick={() => setProfileDropdownOpen(false)}
-                  >
-                    <User size={16} />
-                    <span>Public Profile</span>
                   </Link>
 
                   <div className="dropdown-divider"></div>
@@ -343,14 +316,8 @@ export const Navbar = () => {
             <Link to="/products" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
               Explore All Products
             </Link>
-            <Link to="/wishlist" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
-              Wishlist ({wishlistCount})
-            </Link>
             {currentUser && (
               <>
-                <Link to="/messages" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
-                  Messages ({currentUser?.unreadMessages || 0})
-                </Link>
                 <Link to="/dashboard" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
                   Seller Dashboard
                 </Link>

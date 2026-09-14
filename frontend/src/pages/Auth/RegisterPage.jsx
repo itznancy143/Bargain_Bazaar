@@ -11,8 +11,7 @@ export const RegisterPage = () => {
     name: '',
     email: '',
     password: '',
-    confirmPassword: '',
-    role: 'buyer'
+    confirmPassword: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,7 +31,7 @@ export const RegisterPage = () => {
     setErrorMessage('');
     setSuccessMessage('');
 
-    const { name, email, password, confirmPassword, role } = formData;
+    const { name, email, password, confirmPassword } = formData;
 
     // 1. Client-side Validations
     if (!name.trim() || !email.trim() || !password) {
@@ -65,7 +64,7 @@ export const RegisterPage = () => {
 
     try {
       // 2. Call backend register API
-      const res = await authService.register(name.trim(), email.trim(), password, role);
+      const res = await authService.register(name.trim(), email.trim(), password);
 
       if (res.success) {
         setSuccessMessage('Account created successfully. Please log in.');

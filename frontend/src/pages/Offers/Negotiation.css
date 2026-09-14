@@ -1,3 +1,18 @@
+.neg-address-form {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 16px;
+  background: var(--bg-muted);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.neg-address-form h3 { font-size: 1rem; color: var(--text-main); }
+.neg-address-form .neg-action-desc { margin: 0; }
+.neg-text-input { width: 100%; padding: 11px 12px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text-main); }
+.neg-address-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 640px) { .neg-address-grid { grid-template-columns: 1fr; } }
 /* Negotiation Room & Timeline Styling */
 
 .negotiation-page-root {

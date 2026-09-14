@@ -11,6 +11,8 @@ import { RegisterPage } from './pages/Auth/RegisterPage';
 import { NegotiationPage } from './pages/Offers/NegotiationPage';
 import { OffersDashboardPage } from './pages/Offers/OffersDashboardPage';
 import { NotFoundPage } from './pages/NotFound/NotFoundPage';
+import { OrdersPage } from './pages/Orders/OrdersPage';
+import { OrderDetailsPage } from './pages/Orders/OrderDetailsPage';
 
 export function App() {
   return (
@@ -27,6 +29,8 @@ export function App() {
         <Route path="dashboard/products/new" element={<AddProductPage />} />
         <Route path="dashboard/products/edit/:id" element={<AddProductPage />} />
         <Route path="dashboard/offers" element={<OffersDashboardPage />} />
+        <Route path="orders" element={<OrdersPage />} />
+        <Route path="orders/:id" element={<OrderDetailsPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="*" element={<NotFoundPage />} />

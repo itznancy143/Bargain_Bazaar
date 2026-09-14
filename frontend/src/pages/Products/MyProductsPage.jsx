@@ -89,9 +89,9 @@ export const MyProductsPage = () => {
           <div className="empty-state-icon">
             <LogIn size={32} />
           </div>
-          <h2>Seller Authentication Required</h2>
+          <h2>Sign In Required</h2>
           <p className="text-muted" style={{ maxWidth: '400px' }}>
-            Please sign in with your seller account to view and manage your product listings and private bargaining prices.
+            Please sign in to view and manage your product listings and private bargaining prices.
           </p>
           <Link to="/login" state={{ from: '/dashboard/products' }} className="btn btn-primary">
             <LogIn size={16} />
