@@ -14,6 +14,14 @@ export const orderService = {
   async getOrderById(orderId) {
     const data = await apiFetch(`/api/orders/${orderId}`);
     return data.order;
+  },
+
+  async updateOrderStatus(orderId, status) {
+    const data = await apiFetch(`/api/orders/${orderId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status })
+    });
+    return data;
   }
 };
 

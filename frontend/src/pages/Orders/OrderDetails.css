@@ -4,12 +4,27 @@
 .order-details-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
 .order-details-header h1 { margin: .35rem 0; font-size: 2rem; }
 .order-details-header p { display: inline-flex; align-items: center; gap: .35rem; color: var(--text-muted); }
+.order-details-alert { margin-bottom: 1rem; }
 .order-details-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.order-status-timeline { grid-column: 1 / -1; padding: 1.25rem; }
+.order-status-timeline h2 { margin-bottom: 1rem; font-size: 1.1rem; }
+.order-status-steps { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.order-status-step { display: flex; flex-direction: column; align-items: center; gap: .45rem; color: var(--text-muted); font-size: .78rem; text-align: center; min-width: 84px; }
+.order-status-step-dot { width: 30px; height: 30px; display: grid; place-items: center; border: 2px solid var(--border-light); border-radius: 50%; background: var(--bg-surface); }
+.order-status-step.complete { color: var(--success-text); font-weight: 700; }
+.order-status-step.complete .order-status-step-dot { border-color: var(--success); background: var(--success-bg); }
+.order-status-step.current .order-status-step-dot { box-shadow: 0 0 0 3px var(--primary-100); }
+.order-status-connector { height: 2px; flex: 1; background: var(--border-light); margin-bottom: 1.35rem; }
+.order-status-connector.complete { background: var(--success); }
+.order-cancelled-state { display: inline-flex; align-items: center; gap: .4rem; margin-top: 1rem; padding: .5rem .7rem; color: var(--error-text); background: var(--error-bg); border-radius: var(--radius-sm); font-weight: 700; }
 .order-details-product { grid-column: 1 / -1; display: flex; align-items: center; gap: 1.25rem; padding: 1rem; }
 .order-details-product img { width: 150px; height: 150px; object-fit: cover; border-radius: var(--radius-md); background: var(--bg-muted); }
 .order-details-product h2 { margin: .35rem 0; font-size: 1.35rem; }
 .order-details-product p, .order-details-panel p { color: var(--text-muted); }
 .order-details-panel { padding: 1.25rem; }
+.order-status-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.order-status-actions h2 { width: 100%; }
+.order-cancel-button { border-color: var(--error); color: var(--error-text); }
 .order-details-panel h2 { display: flex; align-items: center; gap: .45rem; margin-bottom: 1rem; font-size: 1.1rem; }
 .order-details-facts { display: grid; gap: .8rem; }
 .order-details-facts div { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: .65rem; }
@@ -26,4 +41,6 @@
   .order-details-layout { grid-template-columns: 1fr; }
   .order-details-product { align-items: flex-start; }
   .order-details-product img { width: 96px; height: 96px; }
+  .order-status-steps { overflow-x: auto; justify-content: flex-start; padding-bottom: .5rem; }
+  .order-status-connector { min-width: 24px; }
 }

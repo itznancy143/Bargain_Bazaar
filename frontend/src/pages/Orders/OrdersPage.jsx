@@ -75,6 +75,7 @@ export const OrdersPage = () => {
         <div className="orders-list">
           {orders.map((order) => {
             const product = order.product || {};
+            const orderStatus = order.orderStatus || 'pending_payment';
             const orderSellerId = order.seller?._id || order.seller;
             const isOrderSeller = String(orderSellerId) === String(currentUserId);
             const person = isOrderSeller ? order.buyer : order.seller;
@@ -106,7 +107,7 @@ export const OrdersPage = () => {
                   )}
                 </div>
                 <div className="order-statuses">
-                  <span className="order-status order-status-main"><CheckCircle2 size={14} /> {label(order.orderStatus)}</span>
+                  <span className="order-status order-status-main"><CheckCircle2 size={14} /> {label(orderStatus)}</span>
                   <span className="order-status order-status-payment">Payment: {label(order.paymentStatus)}</span>
                   <Link to={`/orders/${order._id}`} className="btn btn-secondary btn-sm">View Details</Link>
                 </div>

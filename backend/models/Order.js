@@ -25,7 +25,7 @@ const orderSchema = new mongoose.Schema(
     deliveryAddress: { type: deliveryAddressSchema, required: true },
     orderStatus: {
       type: String,
-      enum: ['pending_payment', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'],
+      enum: ['pending_payment', 'processing', 'shipped', 'delivered', 'cancelled'],
       default: 'pending_payment'
     },
     paymentStatus: {

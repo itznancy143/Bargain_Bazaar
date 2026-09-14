@@ -8,6 +8,7 @@ import './OrderDetails.css';
 const FALLBACK_PRODUCT_IMAGE = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80';
 const formatMoney = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
 const label = (value) => String(value || '').replaceAll('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+const STATUS_STEPS = ['pending_payment', 'processing', 'shipped', 'delivered'];
 
 const getProductImage = (product) => product?.image || product?.images?.[0] || FALLBACK_PRODUCT_IMAGE;
 
@@ -26,10 +27,11 @@ const AddressBlock = ({ address }) => {
 export const OrderDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useApp();
+  const { currentUser, isAuthenticated } = useApp();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -72,6 +74,39 @@ export const OrderDetailsPage = () => {
   const product = order.product || {};
   const buyer = order.buyer || {};
   const seller = order.seller || {};
+  const currentStatus = order.orderStatus || 'pending_payment';
+  const currentUserId = currentUser?._id || currentUser?.id;
+  const buyerId = buyer._id || buyer.id || buyer;
+  const sellerId = seller._id || seller.id || seller;
+  const isBuyer = String(currentUserId) === String(buyerId);
+  const isSeller = String(currentUserId) === String(sellerId);
+
+  const updateStatus = async (nextStatus) => {
+    if (statusUpdating) return;
+    setStatusUpdating(true);
+    setError('');
+    try {
+      const response = await orderService.updateOrderStatus(order._id, nextStatus);
+      setOrder(response.order);
+    } catch (err) {
+      setError(err.message || 'Unable to update order status.');
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
+  const handleStatusAction = (nextStatus, confirmationMessage) => {
+    if (window.confirm(confirmationMessage)) updateStatus(nextStatus);
+  };
+
+  const action = currentStatus === 'pending_payment' && isSeller
+    ? { status: 'processing', label: 'Start Processing', confirmation: 'Start processing this order?' }
+    : currentStatus === 'processing' && isSeller
+    ? { status: 'shipped', label: 'Mark as Shipped', confirmation: 'Mark this order as shipped?' }
+    : currentStatus === 'shipped' && isBuyer
+    ? { status: 'delivered', label: 'Mark as Delivered', confirmation: 'Mark this order as delivered?' }
+    : null;
+  const canCancel = ['pending_payment', 'processing'].includes(currentStatus) && (isBuyer || isSeller);
 
   return (
     <div className="container order-details-page">
@@ -82,8 +117,30 @@ export const OrderDetailsPage = () => {
           <h1>Order #{order.orderId || order._id}</h1>
           <p><CalendarDays size={14} /> {order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-IN') : 'Date unavailable'}</p>
         </div>
-        <span className="order-status order-status-main"><CheckCircle2 size={14} /> {label(order.orderStatus)}</span>
+        <span className={`order-status order-status-main order-status-${currentStatus}`}><CheckCircle2 size={14} /> {label(currentStatus)}</span>
       </div>
+
+      {error && <div className="alert alert-danger order-details-alert">{error}</div>}
+
+      <section className="surface-card order-status-timeline">
+        <h2>Delivery Status</h2>
+        <div className="order-status-steps">
+          {STATUS_STEPS.map((status, index) => {
+            const isComplete = currentStatus !== 'cancelled' && STATUS_STEPS.indexOf(currentStatus) >= index;
+            const isCurrent = currentStatus === status;
+            return (
+              <React.Fragment key={status}>
+                <div className={`order-status-step ${isComplete ? 'complete' : ''} ${isCurrent ? 'current' : ''}`}>
+                  <span className="order-status-step-dot">{isComplete ? <CheckCircle2 size={14} /> : index + 1}</span>
+                  <span>{label(status)}</span>
+                </div>
+                {index < STATUS_STEPS.length - 1 && <span className={`order-status-connector ${isComplete && currentStatus !== status ? 'complete' : ''}`} />}
+              </React.Fragment>
+            );
+          })}
+        </div>
+        {currentStatus === 'cancelled' && <div className="order-cancelled-state"><AlertCircle size={16} /> Order Cancelled</div>}
+      </section>
 
       <div className="order-details-layout">
         <section className="surface-card order-details-product">
@@ -110,6 +167,21 @@ export const OrderDetailsPage = () => {
             <div><dt>Total Amount</dt><dd>{formatMoney(order.totalAmount)}</dd></div>
             <div><dt>Payment Status</dt><dd>{label(order.paymentStatus) || 'Unavailable'}</dd></div>
           </dl>
+        </section>
+
+        <section className="surface-card order-details-panel order-status-actions">
+          <h2>Manage Order Status</h2>
+          {action && (
+            <button type="button" className="btn btn-primary" disabled={statusUpdating} onClick={() => handleStatusAction(action.status, action.confirmation)}>
+              {statusUpdating ? 'Updating...' : action.label}
+            </button>
+          )}
+          {canCancel && (
+            <button type="button" className="btn btn-secondary order-cancel-button" disabled={statusUpdating} onClick={() => handleStatusAction('cancelled', 'Cancel this order?')}>
+              {statusUpdating ? 'Updating...' : 'Cancel Order'}
+            </button>
+          )}
+          {!action && !canCancel && <p className="order-details-muted">No status actions are available for this order.</p>}
         </section>
 
         <section className="surface-card order-details-panel">
