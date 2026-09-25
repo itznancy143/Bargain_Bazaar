@@ -6,6 +6,18 @@
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001').replace(/\/$/, '');
 
 /**
+ * Helper to resolve relative upload paths to full backend URLs
+ */
+export const resolveImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) {
+    return url;
+  }
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  return `${API_BASE_URL}${cleanPath}`;
+};
+
+/**
  * Perform an authenticated API request using native fetch()
  * @param {string} endpoint - API route (e.g. '/api/auth/me')
  * @param {object} options - Fetch options (method, headers, body)
@@ -13,9 +25,10 @@ export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localh
  */
 export const apiFetch = async (endpoint, options = {}) => {
   const token = localStorage.getItem('token');
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
 
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {})
   };

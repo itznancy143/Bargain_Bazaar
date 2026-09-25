@@ -14,9 +14,16 @@ import {
   Share2,
   AlertCircle,
   Tag,
-  ArrowLeft
+  ArrowLeft,
+  Star,
+  MessageSquare,
+  UserCheck,
+  ZoomIn,
+  X
 } from 'lucide-react';
 import { productService } from '../../services/productService';
+import { reviewService } from '../../services/reviewService';
+import { resolveImageUrl } from '../../services/api';
 import { useApp } from '../../context/AppContext';
 import { Badge } from '../../components/common/Badge';
 import { RatingStars } from '../../components/common/RatingStars';
@@ -34,23 +41,51 @@ export const ProductDetailPage = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Reviews state
+  const [reviewsData, setReviewsData] = useState({
+    totalReviews: 0,
+    averageRating: 0,
+    ratingBreakdown: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    reviews: []
+  });
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [lightboxImage, setLightboxImage] = useState(null);
+
   useEffect(() => {
-    const loadProduct = async () => {
+    const loadProductAndReviews = async () => {
       setLoading(true);
       setError('');
       try {
-        const data = await productService.getProductById(id);
-        setProduct(data);
-        setSelectedImage(data.image || (data.images && data.images[0]) || '');
+        const productData = await productService.getProductById(id);
+        setProduct(productData);
+        setSelectedImage(productData.image || (productData.images && productData.images[0]) || '');
       } catch (err) {
         setError(err.message || 'Product not found');
       } finally {
         setLoading(false);
       }
+
+      // Fetch reviews independently
+      setReviewsLoading(true);
+      try {
+        const revData = await reviewService.getProductReviews(id);
+        if (revData && revData.success) {
+          setReviewsData({
+            totalReviews: revData.totalReviews || 0,
+            averageRating: revData.averageRating || 0,
+            ratingBreakdown: revData.ratingBreakdown || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+            reviews: revData.reviews || []
+          });
+        }
+      } catch (revErr) {
+        console.error('Failed to load product reviews:', revErr);
+      } finally {
+        setReviewsLoading(false);
+      }
     };
 
     if (id) {
-      loadProduct();
+      loadProductAndReviews();
     }
   }, [id]);
 
@@ -134,6 +169,12 @@ export const ProductDetailPage = () => {
     product.seller?.avatar ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(sellerName)}&background=2563EB&color=fff&bold=true`;
 
+  const { totalReviews, averageRating, ratingBreakdown, reviews } = reviewsData;
+
+  const scrollToReviews = () => {
+    document.getElementById('product-reviews-section')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <div className="container product-detail-root">
       {/* Breadcrumb Navigation */}
@@ -200,17 +241,36 @@ export const ProductDetailPage = () => {
           {/* Title */}
           <h1 className="detail-title">{product.title}</h1>
 
-          {/* Location and Views */}
+          {/* Rating Summary + Location + Views Row */}
           <div className="detail-location-views">
+            <button
+              type="button"
+              className="detail-rating-btn"
+              onClick={scrollToReviews}
+              title="View customer reviews"
+            >
+              {totalReviews > 0 ? (
+                <RatingStars mode="single" rating={averageRating} count={totalReviews} size={15} />
+              ) : (
+                <span className="no-reviews-tag">No reviews yet</span>
+              )}
+            </button>
+
+            <span className="detail-meta-separator">•</span>
+
             <div className="detail-location-item">
               <MapPin size={15} className="text-primary" />
               <span>{product.location || 'India'}</span>
             </div>
+
             {product.viewsCount !== undefined && (
-              <div className="detail-location-item">
-                <Eye size={15} />
-                <span>{product.viewsCount} views</span>
-              </div>
+              <>
+                <span className="detail-meta-separator">•</span>
+                <div className="detail-location-item">
+                  <Eye size={15} />
+                  <span>{product.viewsCount} views</span>
+                </div>
+              </>
             )}
           </div>
 
@@ -335,6 +395,156 @@ export const ProductDetailPage = () => {
           </div>
         </div>
       </div>
+
+      {/* REVIEWS & RATINGS SECTION */}
+      <section id="product-reviews-section" className="product-reviews-section surface-card">
+        <div className="reviews-section-header">
+          <div>
+            <h2 className="reviews-section-title">Reviews & Ratings</h2>
+            <p className="reviews-section-subtitle">
+              Verified feedback and received product photos from buyers
+            </p>
+          </div>
+        </div>
+
+        {/* Rating Summary Overview */}
+        <div className="reviews-summary-card">
+          <div className="reviews-score-hero">
+            {totalReviews > 0 ? (
+              <>
+                <span className="reviews-big-score">{averageRating.toFixed(1)}</span>
+                <RatingStars mode="full" rating={averageRating} size={22} showNumber={false} />
+                <span className="reviews-count-text">
+                  Based on {totalReviews} {totalReviews === 1 ? 'review' : 'reviews'}
+                </span>
+              </>
+            ) : (
+              <div className="reviews-no-score">
+                <RatingStars mode="full" rating={0} size={22} showNumber={false} />
+                <span className="reviews-count-text">No reviews yet</span>
+              </div>
+            )}
+          </div>
+
+          {/* Rating Breakdown Bars */}
+          <div className="reviews-breakdown-list">
+            {[5, 4, 3, 2, 1].map((stars) => {
+              const count = ratingBreakdown[stars] || 0;
+              const percentage = totalReviews > 0 ? Math.round((count / totalReviews) * 100) : 0;
+              return (
+                <div key={stars} className="breakdown-row">
+                  <span className="breakdown-star-label">
+                    {stars} <Star size={12} className="star-icon filled" />
+                  </span>
+                  <div className="breakdown-bar-track">
+                    <div
+                      className="breakdown-bar-fill"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                  <span className="breakdown-count-label">{count}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Reviews List */}
+        <div className="reviews-feed">
+          {reviewsLoading ? (
+            <div className="reviews-feed-loading">Loading reviews...</div>
+          ) : reviews.length === 0 ? (
+            <div className="reviews-feed-empty">
+              <MessageSquare size={36} className="empty-icon" />
+              <h3>No reviews yet</h3>
+              <p>Be the first buyer to review this product and share photos after delivery!</p>
+            </div>
+          ) : (
+            <div className="reviews-cards-grid">
+              {reviews.map((rev) => {
+                const buyerName = rev.buyer?.name || 'Verified Buyer';
+                const avatar =
+                  rev.buyer?.avatar ||
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(buyerName)}&background=2563EB&color=fff&bold=true`;
+                const dateString = new Date(rev.createdAt).toLocaleDateString('en-IN', {
+                  month: 'long',
+                  year: 'numeric'
+                });
+
+                return (
+                  <article key={rev._id} className="review-item-card">
+                    <div className="review-item-top">
+                      <div className="reviewer-info">
+                        <img src={avatar} alt={buyerName} className="reviewer-avatar" />
+                        <div>
+                          <div className="reviewer-name-row">
+                            <span className="reviewer-name">{buyerName}</span>
+                            <span className="reviewer-badge">
+                              <CheckCircle size={12} />
+                              <span>Verified Buyer</span>
+                            </span>
+                          </div>
+                          <span className="review-date">{dateString}</span>
+                        </div>
+                      </div>
+                      <RatingStars mode="full" rating={rev.rating} size={15} showNumber={false} />
+                    </div>
+
+                    {rev.comment && (
+                      <p className="review-item-comment">"{rev.comment}"</p>
+                    )}
+
+                    {/* Buyer Uploaded Review Photos Gallery */}
+                    {rev.images && rev.images.length > 0 && (
+                      <div className="review-item-photos-container">
+                        <span className="review-photos-heading">Photos from buyer:</span>
+                        <div className="review-item-photos-grid">
+                          {rev.images.map((imgObj, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              className="review-item-photo-thumb"
+                              onClick={() => setLightboxImage(resolveImageUrl(imgObj.url))}
+                              title="Click to view full photo"
+                            >
+                              <img
+                                src={resolveImageUrl(imgObj.url)}
+                                alt={`Review photo by ${buyerName}`}
+                                className="review-photo-img"
+                                loading="lazy"
+                              />
+                              <span className="photo-zoom-overlay">
+                                <ZoomIn size={15} />
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Lightbox Modal for enlarged photo viewing */}
+      {lightboxImage && (
+        <div className="review-lightbox-overlay" onClick={() => setLightboxImage(null)}>
+          <div className="review-lightbox-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="lightbox-close-btn"
+              onClick={() => setLightboxImage(null)}
+              aria-label="Close photo preview"
+            >
+              <X size={20} />
+            </button>
+            <img src={lightboxImage} alt="Enlarged review photo" className="lightbox-img" />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
