@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import Review from '../models/Review.js';
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
+import { createNotification } from '../utils/notificationHelper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -151,6 +152,22 @@ export const createReview = async (req, res) => {
     const populatedReview = await Review.findById(review._id)
       .populate('buyer', USER_FIELDS)
       .populate('seller', USER_FIELDS);
+
+    // Notify seller of new product review
+    const product = await Product.findById(order.product).select('title');
+    const productTitle = product?.title || 'product';
+
+    await createNotification({
+      recipient: order.seller,
+      eventKey: `review:${review._id}:submitted`,
+      type: 'review_submitted',
+      title: 'New Review Received',
+      message: `Someone reviewed your product: "${productTitle}" (${numRating} ★).`,
+      link: `/products/${order.product}#product-reviews-section`,
+      product: order.product,
+      order: order._id,
+      review: review._id
+    });
 
     return res.status(201).json({
       success: true,

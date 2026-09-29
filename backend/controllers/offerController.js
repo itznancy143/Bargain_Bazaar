@@ -3,6 +3,7 @@ import Offer from '../models/Offer.js';
 import Product from '../models/Product.js';
 import User from '../models/User.js';
 import Order from '../models/Order.js';
+import { createNotification } from '../utils/notificationHelper.js';
 
 // Safe product fields to populate (SECURITY: minimumPrice is NEVER included)
 const SAFE_PRODUCT_FIELDS = 'title images image askingPrice originalPrice condition location category categorySlug status isNegotiable brand seller';
@@ -101,6 +102,18 @@ export const createOffer = async (req, res) => {
 
       await activeOffer.save();
 
+      // Trigger notification for seller
+      await createNotification({
+        recipient: activeOffer.seller,
+        eventKey: `offer:${activeOffer._id}:event:${activeOffer.history[activeOffer.history.length - 1]._id}`,
+        type: 'counteroffer_received',
+        title: 'Counteroffer Received',
+        message: `${req.user.name || 'Buyer'} submitted a counteroffer of ₹${offerAmount.toLocaleString('en-IN')} for "${product.title}".`,
+        link: `/negotiation/offer/${activeOffer._id}`,
+        product: product._id,
+        offer: activeOffer._id
+      });
+
       const populatedOffer = await Offer.findById(activeOffer._id)
         .populate('product', SAFE_PRODUCT_FIELDS)
         .populate('buyer', SAFE_USER_FIELDS)
@@ -134,6 +147,18 @@ export const createOffer = async (req, res) => {
           createdAt: new Date()
         }
       ]
+    });
+
+    // Trigger notification for seller
+    await createNotification({
+      recipient: product.seller,
+      eventKey: `offer:${newOffer._id}:created`,
+      type: 'offer_received',
+      title: 'New Offer Received',
+      message: `${req.user.name || 'A buyer'} offered ₹${offerAmount.toLocaleString('en-IN')} for "${product.title}".`,
+      link: `/negotiation/offer/${newOffer._id}`,
+      product: product._id,
+      offer: newOffer._id
     });
 
     // 6. Populate and return sanitized offer
@@ -405,6 +430,32 @@ export const acceptOffer = async (req, res) => {
       .populate('seller', SAFE_USER_FIELDS)
       .populate('history.sender', SAFE_USER_FIELDS);
 
+    const productTitle = populatedOffer.product?.title || 'product';
+
+    if (isBuyer) {
+      await createNotification({
+        recipient: offer.seller,
+        eventKey: `offer:${offer._id}:event:${offer.history[offer.history.length - 1]._id}`,
+        type: 'offer_accepted',
+        title: 'Offer Accepted by Buyer',
+        message: `${req.user.name || 'Buyer'} accepted the price of ₹${Number(offer.amount).toLocaleString('en-IN')} for "${productTitle}". Waiting for your confirmation.`,
+        link: `/negotiation/offer/${offer._id}`,
+        product: populatedOffer.product?._id || offer.product,
+        offer: offer._id
+      });
+    } else {
+      await createNotification({
+        recipient: offer.buyer,
+        eventKey: `offer:${offer._id}:event:${offer.history[offer.history.length - 1]._id}`,
+        type: 'counteroffer_received',
+        title: 'Offer Accepted by Seller',
+        message: `Seller accepted your offer of ₹${Number(offer.amount).toLocaleString('en-IN')} for "${productTitle}". Please confirm your delivery details.`,
+        link: `/negotiation/offer/${offer._id}`,
+        product: populatedOffer.product?._id || offer.product,
+        offer: offer._id
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: isBuyer
@@ -543,6 +594,47 @@ export const confirmDeal = async (req, res) => {
       .populate('seller', SAFE_USER_FIELDS)
       .populate('history.sender', SAFE_USER_FIELDS);
 
+    const productTitle = populatedOffer.product?.title || 'product';
+
+    // 1. Notify buyer: Deal confirmed
+    await createNotification({
+      recipient: finalOffer.buyer,
+      eventKey: `offer:${finalOffer._id}:deal-confirmed`,
+      type: 'deal_confirmed',
+      title: 'Deal Confirmed',
+      message: `Deal confirmed for "${productTitle}" at ₹${Number(finalOffer.agreedPrice).toLocaleString('en-IN')}.`,
+      link: `/negotiation/offer/${finalOffer._id}`,
+      product: populatedOffer.product?._id || finalOffer.product,
+      offer: finalOffer._id,
+      order: order._id
+    });
+
+    // 2. Notify buyer: Order created
+    await createNotification({
+      recipient: finalOffer.buyer,
+      eventKey: `order:${order._id}:created`,
+      type: 'order_created',
+      title: 'Order Created',
+      message: `Your order for "${productTitle}" has been created.`,
+      link: `/orders/${order._id}`,
+      product: populatedOffer.product?._id || finalOffer.product,
+      offer: finalOffer._id,
+      order: order._id
+    });
+
+    // 3. Notify seller: Order created
+    await createNotification({
+      recipient: product.seller,
+      eventKey: `order:${order._id}:created`,
+      type: 'order_created',
+      title: 'Order Created',
+      message: `Order created for "${productTitle}".`,
+      link: `/orders/${order._id}`,
+      product: populatedOffer.product?._id || finalOffer.product,
+      offer: finalOffer._id,
+      order: order._id
+    });
+
     return res.status(200).json({
       success: true,
       message: `Deal confirmed at ₹${Number(finalOffer.agreedPrice).toLocaleString('en-IN')}.`,
@@ -624,6 +716,20 @@ export const rejectOffer = async (req, res) => {
       .populate('buyer', SAFE_USER_FIELDS)
       .populate('seller', SAFE_USER_FIELDS)
       .populate('history.sender', SAFE_USER_FIELDS);
+
+    const productTitle = populatedOffer.product?.title || 'product';
+    const targetRecipient = isBuyer ? offer.seller : offer.buyer;
+
+    await createNotification({
+      recipient: targetRecipient,
+      eventKey: `offer:${offer._id}:event:${offer.history[offer.history.length - 1]._id}`,
+      type: 'offer_rejected',
+      title: 'Offer Declined',
+      message: `The offer for "${productTitle}" was declined.`,
+      link: `/negotiation/offer/${offer._id}`,
+      product: populatedOffer.product?._id || offer.product,
+      offer: offer._id
+    });
 
     return res.status(200).json({
       success: true,
@@ -725,6 +831,20 @@ export const counterOffer = async (req, res) => {
       .populate('buyer', SAFE_USER_FIELDS)
       .populate('seller', SAFE_USER_FIELDS)
       .populate('history.sender', SAFE_USER_FIELDS);
+
+    const counterProductTitle = populatedOffer.product?.title || 'product';
+    const counterRecipient = isBuyer ? offer.seller : offer.buyer;
+
+    await createNotification({
+      recipient: counterRecipient,
+      eventKey: `offer:${offer._id}:event:${offer.history[offer.history.length - 1]._id}`,
+      type: 'counteroffer_received',
+      title: 'Counteroffer Received',
+      message: `You received a counteroffer of ₹${Number(counterAmount).toLocaleString('en-IN')} for "${counterProductTitle}".`,
+      link: `/negotiation/offer/${offer._id}`,
+      product: populatedOffer.product?._id || offer.product,
+      offer: offer._id
+    });
 
     return res.status(200).json({
       success: true,

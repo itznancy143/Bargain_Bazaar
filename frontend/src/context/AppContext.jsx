@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authService } from '../services/authService';
+import { notificationService } from '../services/notificationService';
 
 const AppContext = createContext();
 
@@ -9,35 +10,51 @@ export const AppProvider = ({ children }) => {
   const [authLoading, setAuthLoading] = useState(true);
   const [wishlist, setWishlist] = useState(['prod-101', 'prod-106']);
   const [searchQuery, setSearchQuery] = useState('');
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: 'Counter-offer received!',
-      message: 'Aarav counter-offered ₹72,000 on iPhone 15 Pro.',
-      time: '10 mins ago',
-      read: false,
-      type: 'offer',
-      link: '/negotiation/prod-101'
-    },
-    {
-      id: 2,
-      title: 'New offer on your listing',
-      message: 'Buyer offered ₹80,000 for MacBook Air M2.',
-      time: '1 hour ago',
-      read: false,
-      type: 'offer',
-      link: '/negotiation/prod-102'
-    },
-    {
-      id: 3,
-      title: 'Price Drop Alert',
-      message: 'Sony WH-1000XM5 from your wishlist dropped by ₹1,000!',
-      time: 'Yesterday',
-      read: true,
-      type: 'alert',
-      link: '/products/prod-103'
+
+  // Persistent database-backed notification state
+  const [notifications, setNotifications] = useState([]);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState('');
+
+  // Fetch full user notification feed
+  const fetchNotifications = useCallback(async () => {
+    if (!authService.getToken()) {
+      setNotifications([]);
+      setUnreadNotificationsCount(0);
+      setNotificationsError('');
+      return;
     }
-  ]);
+    setNotificationsLoading(true);
+    setNotificationsError('');
+    try {
+      const data = await notificationService.getMyNotifications({ limit: 40 });
+      if (data && data.success) {
+        setNotifications(data.notifications || []);
+        setUnreadNotificationsCount(
+          typeof data.unreadCount === 'number'
+            ? data.unreadCount
+            : (data.notifications || []).filter((n) => !n.read).length
+        );
+      }
+    } catch (err) {
+      setNotificationsError('Unable to load notifications. Please try again.');
+      console.warn('Failed to fetch notifications:', err.message);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, []);
+
+  // Fetch just the unread count
+  const fetchUnreadCount = useCallback(async () => {
+    if (!authService.getToken()) return;
+    try {
+      const count = await notificationService.getUnreadCount();
+      setUnreadNotificationsCount(count);
+    } catch (err) {
+      console.warn('Failed to fetch unread notification count:', err.message);
+    }
+  }, []);
 
   // Verify stored token with backend /api/auth/me on initial app load
   useEffect(() => {
@@ -60,9 +77,23 @@ export const AppProvider = ({ children }) => {
     verifyUserSession();
   }, []);
 
+  // Sync notifications whenever authenticated user session changes
+  useEffect(() => {
+    if (currentUser) {
+      fetchNotifications();
+    } else {
+      setNotifications([]);
+      setUnreadNotificationsCount(0);
+      setNotificationsError('');
+    }
+  }, [currentUser, fetchNotifications]);
+
   const handleLogout = () => {
     authService.logout();
     setCurrentUser(null);
+    setNotifications([]);
+    setUnreadNotificationsCount(0);
+    setNotificationsError('');
   };
 
   const toggleWishlist = (productId) => {
@@ -73,8 +104,37 @@ export const AppProvider = ({ children }) => {
 
   const isWishlisted = (productId) => wishlist.includes(productId);
 
-  const markAllNotificationsRead = () => {
+  // Mark single notification as read
+  const markNotificationAsRead = async (notificationId) => {
+    if (!notificationId) return;
+
+    // Optimistic UI state update
+    setNotifications((prev) =>
+      prev.map((n) => (n._id === notificationId || n.id === notificationId ? { ...n, read: true } : n))
+    );
+    setUnreadNotificationsCount((prev) => Math.max(0, prev - 1));
+
+    try {
+      const res = await notificationService.markAsRead(notificationId);
+      if (res && typeof res.unreadCount === 'number') {
+        setUnreadNotificationsCount(res.unreadCount);
+      }
+    } catch (err) {
+      console.warn('Failed to mark notification as read:', err.message);
+    }
+  };
+
+  // Mark all notifications as read
+  const markAllNotificationsRead = async () => {
+    // Optimistic UI state update
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setUnreadNotificationsCount(0);
+
+    try {
+      await notificationService.markAllAsRead();
+    } catch (err) {
+      console.warn('Failed to mark all notifications as read:', err.message);
+    }
   };
 
   return (
@@ -92,7 +152,12 @@ export const AppProvider = ({ children }) => {
         searchQuery,
         setSearchQuery,
         notifications,
-        unreadNotificationsCount: notifications.filter((n) => !n.read).length,
+        unreadNotificationsCount,
+        notificationsLoading,
+        notificationsError,
+        fetchNotifications,
+        fetchUnreadCount,
+        markNotificationAsRead,
         markAllNotificationsRead
       }}
     >

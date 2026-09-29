@@ -13,10 +13,36 @@ import {
   ChevronDown,
   Handshake,
   CheckCircle2,
-  LogIn
+  LogIn,
+  Star,
+  Tag,
+  Loader2,
+  Check
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import './Navbar.css';
+
+// Formatter for relative timestamps
+const formatNotificationTime = (dateStr) => {
+  if (!dateStr) return '';
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffInSeconds = Math.floor((now - date) / 1000);
+
+  if (diffInSeconds < 60) return 'Just now';
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays === 1) return 'Yesterday';
+  if (diffInDays < 7) return `${diffInDays}d ago`;
+
+  return date.toLocaleDateString('en-IN', {
+    month: 'short',
+    day: 'numeric'
+  });
+};
 
 export const Navbar = () => {
   const navigate = useNavigate();
@@ -27,6 +53,10 @@ export const Navbar = () => {
     setSearchQuery,
     notifications,
     unreadNotificationsCount,
+    notificationsLoading,
+    notificationsError,
+    fetchNotifications,
+    markNotificationAsRead,
     markAllNotificationsRead
   } = useApp();
 
@@ -64,11 +94,55 @@ export const Navbar = () => {
   const onSignOut = () => {
     setProfileDropdownOpen(false);
     setMobileMenuOpen(false);
+    setNotificationsOpen(false);
     handleLogout();
     navigate('/login');
   };
 
-  const userAvatar = currentUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'User')}&background=2563EB&color=fff&bold=true`;
+  const toggleNotifications = () => {
+    const next = !notificationsOpen;
+    setNotificationsOpen(next);
+    if (next && fetchNotifications) {
+      fetchNotifications();
+    }
+  };
+
+  const handleNotificationClick = (n) => {
+    const notifId = n._id || n.id;
+    if (!n.read && markNotificationAsRead) {
+      markNotificationAsRead(notifId);
+    }
+    setNotificationsOpen(false);
+    if (n.link) {
+      navigate(n.link);
+    }
+  };
+
+  const renderNotificationIcon = (type) => {
+    switch (type) {
+      case 'offer_received':
+      case 'counteroffer_received':
+        return <Handshake size={14} className="notif-type-icon notif-icon-offer" />;
+      case 'offer_accepted':
+      case 'deal_confirmed':
+        return <CheckCircle2 size={14} className="notif-type-icon notif-icon-deal" />;
+      case 'offer_rejected':
+        return <X size={14} className="notif-type-icon notif-icon-reject" />;
+      case 'order_created':
+      case 'order_status_changed':
+        return <ShoppingBag size={14} className="notif-type-icon notif-icon-order" />;
+      case 'order_delivered':
+        return <CheckCircle2 size={14} className="notif-type-icon notif-icon-delivered" />;
+      case 'review_submitted':
+        return <Star size={14} className="notif-type-icon notif-icon-review" />;
+      default:
+        return <Bell size={14} className="notif-type-icon notif-icon-default" />;
+    }
+  };
+
+  const userAvatar =
+    currentUser?.avatar ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'User')}&background=2563EB&color=fff&bold=true`;
 
   return (
     <header className="navbar-root sticky-top">
@@ -80,7 +154,9 @@ export const Navbar = () => {
               <Handshake size={22} className="brand-icon" />
             </div>
             <div className="brand-text-wrap">
-              <span className="brand-title">Bargain<span className="brand-highlight">Bazaar</span></span>
+              <span className="brand-title">
+                Bargain<span className="brand-highlight">Bazaar</span>
+              </span>
               <span className="brand-tagline">Buy Smart • Sell Better • Bargain Freely</span>
             </div>
           </Link>
@@ -138,8 +214,9 @@ export const Navbar = () => {
               <button
                 type="button"
                 className={`navbar-icon-btn ${notificationsOpen ? 'active' : ''}`}
-                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                onClick={toggleNotifications}
                 title="Notifications"
+                aria-label="Notifications"
               >
                 <Bell size={20} />
                 {unreadNotificationsCount > 0 && (
@@ -150,33 +227,83 @@ export const Navbar = () => {
               {notificationsOpen && (
                 <div className="nav-dropdown-menu notif-dropdown animate-fade-in">
                   <div className="dropdown-header">
-                    <span className="font-bold">Notifications</span>
+                    <div className="notif-header-title-row">
+                      <span className="font-bold">Notifications</span>
+                      {unreadNotificationsCount > 0 && (
+                        <span className="notif-header-badge">{unreadNotificationsCount} unread</span>
+                      )}
+                    </div>
                     {unreadNotificationsCount > 0 && (
                       <button
                         type="button"
-                        className="text-xs text-primary"
+                        className="notif-mark-read-btn"
                         onClick={markAllNotificationsRead}
                       >
-                        Mark all read
+                        <Check size={12} />
+                        <span>Mark all read</span>
                       </button>
                     )}
                   </div>
+
                   <div className="notif-list">
-                    {notifications.map((n) => (
-                      <Link
-                        key={n.id}
-                        to={n.link}
-                        className={`notif-item ${!n.read ? 'unread' : ''}`}
-                        onClick={() => setNotificationsOpen(false)}
-                      >
-                        <div className="notif-bullet"></div>
-                        <div className="notif-content">
-                          <div className="notif-title">{n.title}</div>
-                          <div className="notif-desc">{n.message}</div>
-                          <div className="notif-time">{n.time}</div>
-                        </div>
-                      </Link>
-                    ))}
+                    {notificationsError && notifications.length > 0 && (
+                      <div className="notif-error-state" role="alert">
+                        {notificationsError}
+                      </div>
+                    )}
+                    {notificationsLoading && (!notifications || notifications.length === 0) ? (
+                      <div className="notif-empty-state">
+                        <Loader2 size={24} className="notif-spinner animate-spin" />
+                        <span>Loading notifications...</span>
+                      </div>
+                    ) : notificationsError && notifications.length === 0 ? (
+                      <div className="notif-empty-state notif-error-empty" role="alert">
+                        <span>{notificationsError}</span>
+                        <button type="button" className="notif-mark-read-btn" onClick={fetchNotifications}>
+                          Try again
+                        </button>
+                      </div>
+                    ) : !notifications || notifications.length === 0 ? (
+                      <div className="notif-empty-state">
+                        <Bell size={28} className="notif-empty-icon" />
+                        <span className="notif-empty-title">No notifications yet</span>
+                        <span className="notif-empty-desc">
+                          You'll receive alerts here when buyers make offers, send counteroffers, or update orders.
+                        </span>
+                      </div>
+                    ) : (
+                      notifications.map((n) => {
+                        const notifId = n._id || n.id;
+                        return (
+                          <div
+                            key={notifId}
+                            className={`notif-item ${!n.read ? 'unread' : ''}`}
+                            onClick={() => handleNotificationClick(n)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                handleNotificationClick(n);
+                              }
+                            }}
+                          >
+                            <div className="notif-item-left">
+                              {!n.read && <div className="notif-bullet"></div>}
+                              <div className="notif-icon-badge">
+                                {renderNotificationIcon(n.type)}
+                              </div>
+                            </div>
+                            <div className="notif-content">
+                              <div className="notif-title-row">
+                                <span className="notif-title">{n.title}</span>
+                                <span className="notif-time">{formatNotificationTime(n.createdAt || n.time)}</span>
+                              </div>
+                              <div className="notif-desc">{n.message}</div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               )}

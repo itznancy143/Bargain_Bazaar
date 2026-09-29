@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Order from '../models/Order.js';
+import { createNotification } from '../utils/notificationHelper.js';
 
 const PRODUCT_FIELDS = 'title images image askingPrice condition location category brand';
 const USER_FIELDS = 'name email avatar role';
@@ -129,6 +130,71 @@ export const updateOrderStatus = async (req, res) => {
     await order.save();
 
     const updatedOrder = normalizeOrderStatus(await populateOrder(Order.findById(order._id)));
+    const productTitle = updatedOrder.product?.title || 'product';
+
+    if (status === 'processing') {
+      await createNotification({
+        recipient: order.buyer,
+        eventKey: `order:${order._id}:status:${status}`,
+        type: 'order_status_changed',
+        title: 'Order Processing',
+        message: `Your order for "${productTitle}" is now processing.`,
+        link: `/orders/${order._id}`,
+        product: updatedOrder.product?._id || order.product,
+        order: order._id
+      });
+    } else if (status === 'shipped') {
+      await createNotification({
+        recipient: order.buyer,
+        eventKey: `order:${order._id}:status:${status}`,
+        type: 'order_status_changed',
+        title: 'Order Shipped',
+        message: `Your order for "${productTitle}" has been shipped.`,
+        link: `/orders/${order._id}`,
+        product: updatedOrder.product?._id || order.product,
+        order: order._id
+      });
+    } else if (status === 'delivered') {
+      // Notify buyer with review prompt
+      await createNotification({
+        recipient: order.buyer,
+        eventKey: `order:${order._id}:status:${status}`,
+        type: 'order_delivered',
+        title: 'Order Delivered',
+        message: `Your order for "${productTitle}" has been delivered. You can now leave a review.`,
+        link: `/orders/${order._id}`,
+        product: updatedOrder.product?._id || order.product,
+        order: order._id
+      });
+      // Also notify seller
+      await createNotification({
+        recipient: order.seller,
+        eventKey: `order:${order._id}:status:${status}`,
+        type: 'order_status_changed',
+        title: 'Order Delivered',
+        message: `Order for "${productTitle}" has been delivered.`,
+        link: `/orders/${order._id}`,
+        product: updatedOrder.product?._id || order.product,
+        order: order._id
+      });
+    } else if (status === 'cancelled') {
+      const cancelRecipient = isSeller ? order.buyer : order.seller;
+      const cancelMessage = isSeller
+        ? `Your order for "${productTitle}" has been cancelled.`
+        : `Order for "${productTitle}" has been cancelled by the buyer.`;
+
+      await createNotification({
+        recipient: cancelRecipient,
+        eventKey: `order:${order._id}:status:${status}`,
+        type: 'order_status_changed',
+        title: 'Order Cancelled',
+        message: cancelMessage,
+        link: `/orders/${order._id}`,
+        product: updatedOrder.product?._id || order.product,
+        order: order._id
+      });
+    }
+
     return res.status(200).json({ success: true, message: `Order status updated to ${status}.`, order: updatedOrder });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Failed to update order status', error: error.message });
