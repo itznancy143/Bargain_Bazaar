@@ -43,11 +43,35 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5001;
+let dbConnectionPromise;
+
+const ensureDatabaseConnection = () => {
+  if (!dbConnectionPromise) {
+    dbConnectionPromise = connectDB().catch((error) => {
+      dbConnectionPromise = undefined;
+      throw error;
+    });
+  }
+
+  return dbConnectionPromise;
+};
+
+const handler = async (req, res) => {
+  try {
+    await ensureDatabaseConnection();
+    return app(req, res);
+  } catch {
+    console.error('✗ Request aborted because MongoDB could not be reached.');
+    return res.status(500).json({ message: 'Database connection failed' });
+  }
+};
+
+export default handler;
 
 const startServer = async () => {
   try {
     // Do not accept API requests until the database is ready.
-    await connectDB();
+    await ensureDatabaseConnection();
     app.listen(PORT, () => {
       console.log(`✓ Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
     });
@@ -57,4 +81,6 @@ const startServer = async () => {
   }
 };
 
-startServer();
+if (process.env.VERCEL !== '1') {
+  startServer();
+}
