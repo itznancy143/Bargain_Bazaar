@@ -25,6 +25,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    next();
+  } catch {
+    console.error('✗ Request aborted because MongoDB could not be reached.');
+    res.status(500).json({ message: 'Database connection failed' });
+  }
+});
 
 // Serve static uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -56,17 +65,7 @@ const ensureDatabaseConnection = () => {
   return dbConnectionPromise;
 };
 
-const handler = async (req, res) => {
-  try {
-    await ensureDatabaseConnection();
-    return app(req, res);
-  } catch {
-    console.error('✗ Request aborted because MongoDB could not be reached.');
-    return res.status(500).json({ message: 'Database connection failed' });
-  }
-};
-
-export default handler;
+export default app;
 
 const startServer = async () => {
   try {
